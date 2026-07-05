@@ -42,10 +42,6 @@
                 Xác nhận thuốc
             </button>
 
-            <button id="map-btn" class="control-btn">
-                <span class="material-icons-round">map</span>
-                Bản đồ
-            </button>
         </div>
         </div>
 
@@ -118,6 +114,9 @@
             <button id="close-med-btn" class="btn-text">Đóng lại</button>
         </div>
     </div>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        const ADMIN_PASSWORD = "{{ admin_password }}";
+    </script>
+    <script src="{{ url_for('static', filename='script.js') }}?v=mode-manager-keys-20260607"></script>
 </body>
 </html>

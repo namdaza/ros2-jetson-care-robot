@@ -21,7 +21,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const adminBtn = document.getElementById("admin-btn");
     const medBtn = document.getElementById("med-btn");
-    const mapBtn = document.getElementById("map-btn");
 
     const passwordModal = document.getElementById("password-modal");
     const passInput = document.getElementById("admin-password");
@@ -65,29 +64,24 @@ document.addEventListener("DOMContentLoaded", () => {
     confirmPassBtn.addEventListener("click", () => {
         const password = passInput.value;
 
-        if (password === "1234") {
+        if (password === ADMIN_PASSWORD) {
             passwordModal.classList.remove("show");
-
-            if (window.ManagementChannel) {
-                window.ManagementChannel.postMessage("open_management_ui");
-            } else if (window.parent !== window) {
-                window.parent.postMessage("open_management_ui", "*");
-            } else {
-                alert("Mật khẩu đúng! Đang chuyển sang trang Quản lý...");
-                window.location.assign("http://127.0.0.1:3000");
-            }
+            window.location.assign("/admin");
         } else {
             alert("Mật khẩu không đúng!");
             passInput.value = "";
         }
     });
 
-    medBtn.addEventListener("click", () => {
-        medModal.classList.add("show");
+    passInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            confirmPassBtn.click();
+        }
     });
 
-    mapBtn.addEventListener("click", () => {
-        window.location.assign("/map");
+    medBtn.addEventListener("click", () => {
+        medModal.classList.add("show");
     });
 
     closeMedBtn.addEventListener("click", () => {
