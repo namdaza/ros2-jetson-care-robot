@@ -28,6 +28,7 @@ import tf2_ros
 import serial
 import math
 import threading
+import time
 from rclpy.clock import Clock
 
 
@@ -50,12 +51,11 @@ class SerialBridgeNode(Node):
         self.max_rpm     = self.get_parameter('max_rpm').value
 
         # ── Kết nối Serial ────────────────────────────────────────────────────
-        try:
-            self.ser = serial.Serial(self.serial_port, self.baud_rate, timeout=1.0)
-            self.get_logger().info(f'✅ Đã kết nối Serial: {self.serial_port} @ {self.baud_rate}')
-        except serial.SerialException as e:
-            self.get_logger().error(f'❌ Không mở được cổng Serial: {e}')
-            self.get_logger().error('   Kiểm tra: ls /dev/ttyUSB* hoặc ls /dev/ttyACM*')
+        self.ser = None
+        self.serial_lock = threading.Lock()
+        self.last_reconnect_attempt = 0.0
+        self.last_serial_warn = 0.0
+        if not self._connect_serial(initial=True):
             raise SystemExit(1)
 
         # ── Trạng thái Odometry ───────────────────────────────────────────────
@@ -105,25 +105,75 @@ class SerialBridgeNode(Node):
         rpm_right = max(-self.max_rpm, min(self.max_rpm, rpm_right))
 
         cmd = f'CMD,{rpm_left:.2f},{rpm_right:.2f}\n'
+        if not self._ensure_serial_connected():
+            self._warn_serial_throttled('Serial motor chưa kết nối, bỏ qua /cmd_vel')
+            return
+
         try:
-            self.ser.write(cmd.encode())
+            with self.serial_lock:
+                self.ser.write(cmd.encode())
         except serial.SerialException as e:
             self.get_logger().warn(f'Lỗi ghi Serial: {e}')
+            self._mark_serial_disconnected()
 
     # =========================================================================
     # THREAD: Đọc dữ liệu từ Arduino liên tục
     # =========================================================================
     def _serial_reader_thread(self):
         while rclpy.ok():
+            if not self._ensure_serial_connected():
+                time.sleep(0.2)
+                continue
+
             try:
-                line = self.ser.readline().decode('utf-8', errors='ignore').strip()
+                with self.serial_lock:
+                    line = self.ser.readline().decode('utf-8', errors='ignore').strip()
                 if line.startswith('ENC,'):
                     self._parse_encoder(line)
                 elif line:
                     self.get_logger().debug(f'[Arduino] {line}')
             except serial.SerialException as e:
                 self.get_logger().error(f'Lỗi đọc Serial: {e}')
-                break
+                self._mark_serial_disconnected()
+
+    def _connect_serial(self, initial=False):
+        try:
+            with self.serial_lock:
+                self.ser = serial.Serial(self.serial_port, self.baud_rate, timeout=1.0)
+            self.get_logger().info(f'✅ Đã kết nối Serial: {self.serial_port} @ {self.baud_rate}')
+            return True
+        except serial.SerialException as e:
+            level = self.get_logger().error if initial else self.get_logger().warn
+            level(f'❌ Không mở được cổng Serial: {e}')
+            if initial:
+                self.get_logger().error('   Kiểm tra: ls /dev/ttyUSB* hoặc ls /dev/ttyACM*')
+            return False
+
+    def _ensure_serial_connected(self):
+        if self.ser is not None and self.ser.is_open:
+            return True
+
+        now = time.monotonic()
+        if now - self.last_reconnect_attempt < 1.5:
+            return False
+
+        self.last_reconnect_attempt = now
+        return self._connect_serial(initial=False)
+
+    def _mark_serial_disconnected(self):
+        with self.serial_lock:
+            try:
+                if self.ser is not None:
+                    self.ser.close()
+            except serial.SerialException:
+                pass
+            self.ser = None
+
+    def _warn_serial_throttled(self, message):
+        now = time.monotonic()
+        if now - self.last_serial_warn >= 2.0:
+            self.get_logger().warn(message)
+            self.last_serial_warn = now
 
     # =========================================================================
     # Publish TF + Odom (gọi bởởi timer 10Hz và parse_encoder)
@@ -206,10 +256,11 @@ class SerialBridgeNode(Node):
     # =========================================================================
     def destroy_node(self):
         """Gửi STOP khi node tắt để đảm bảo robot dừng lại."""
-        if hasattr(self, 'ser') and self.ser.is_open:
-            self.ser.write(b'STOP\n')
-            self.ser.close()
-            self.get_logger().info('🛑 Đã gửi STOP và đóng cổng Serial.')
+        if hasattr(self, 'ser') and self.ser is not None and self.ser.is_open:
+            with self.serial_lock:
+                self.ser.write(b'STOP\n')
+                self.ser.close()
+                self.get_logger().info('🛑 Đã gửi STOP và đóng cổng Serial.')
         super().destroy_node()
 
 

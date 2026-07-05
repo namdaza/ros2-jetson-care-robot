@@ -2,7 +2,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
-from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.launch_description_sources import AnyLaunchDescriptionSource, PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
@@ -107,6 +107,12 @@ def generate_launch_description():
         }.items()
     )
 
+    rosbridge_launch = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource([
+            os.path.join(get_package_share_directory('rosbridge_server'), 'launch', 'rosbridge_websocket_launch.xml')
+        ])
+    )
+
     return LaunchDescription([
         lidar_port_arg,
         arduino_port_arg,
@@ -119,4 +125,5 @@ def generate_launch_description():
         sllidar_node,
         scan_filter_node,
         slam_toolbox,
+        rosbridge_launch,
     ])

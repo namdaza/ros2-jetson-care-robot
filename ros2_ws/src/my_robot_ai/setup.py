@@ -26,6 +26,7 @@ setup(
         'console_scripts': [
             'yolo_detection = my_robot_ai.yolo_detection_node:main',
             'human_follower = my_robot_ai.human_follower_node:main',
+            'yolo_web_stream = my_robot_ai.yolo_web_stream_node:main',
         ],
     },
 )

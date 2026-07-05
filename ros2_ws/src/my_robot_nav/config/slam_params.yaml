@@ -86,6 +86,6 @@ scan_buffer_maximum_scan_distance: 10.0
 
 # Map resolution và publish
 transform_publish_period: 0.02       # 50Hz - TF mượt hơn
-map_update_interval: 5.0             # giây - cập nhật map mỗi 5 giây
+map_update_interval: 1.0             # giây - cập nhật map lên UI thường xuyên hơn khi mapping
 resolution: 0.05                     # 5cm/pixel - độ phân giải bản đồ
 max_laser_range: 12.0                # RPLidar A1 tối đa 12m

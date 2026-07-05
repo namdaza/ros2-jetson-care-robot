@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =========================================================================
-# Script tự động tạo udev rules cho Lidar, Arduino Motor và Arduino Sonar
+# Script tự động tạo udev rules cho Lidar, Arduino Motor, Arduino Sonar và Camera
 # =========================================================================
 
 if [ "$EUID" -ne 0 ]
@@ -63,9 +63,53 @@ function bind_device() {
     echo "----------------------------------------------------"
 }
 
+function bind_video_device() {
+    local DEVICENAME=$1
+    local SYMLINK_NAME=$2
+
+    read -p "🔌 RÚT camera USB ra để chuẩn bị. Bấm [Enter] để tiếp tục..."
+
+    OLD_DEVS=$(ls /dev/video* 2>/dev/null)
+
+    read -p "🔌 BÂY GIỜ hãy CẮM camera [$DEVICENAME] vào máy. Bấm [Enter] khi đã cắm xong..."
+    sleep 3
+
+    NEW_DEVS=$(ls /dev/video* 2>/dev/null)
+
+    TARGET_DEV=""
+    for dev in $NEW_DEVS; do
+        if [[ ! "$OLD_DEVS" == *"$dev"* ]]; then
+            TARGET_DEV=$dev
+            break
+        fi
+    done
+
+    if [ -z "$TARGET_DEV" ]; then
+        echo "❌ Lỗi: Không nhận diện được camera mới nào được cắm vào! Hãy thử lại quá trình."
+        exit 1
+    fi
+
+    echo "✅ Đã tìm thấy [$DEVICENAME] tại cổng: $TARGET_DEV"
+
+    ID_VENDOR=$(udevadm info -a -n $TARGET_DEV | grep '{idVendor}' | head -n 1 | awk -F'==' '{print $2}' | tr -d '"')
+    ID_PRODUCT=$(udevadm info -a -n $TARGET_DEV | grep '{idProduct}' | head -n 1 | awk -F'==' '{print $2}' | tr -d '"')
+
+    if [ -z "$ID_VENDOR" ] || [ -z "$ID_PRODUCT" ]; then
+        echo "❌ Lỗi: Không đọc được idVendor/idProduct của camera."
+        exit 1
+    fi
+
+    RULE="SUBSYSTEM==\"video4linux\", KERNEL==\"video*\", ATTRS{idVendor}==\"$ID_VENDOR\", ATTRS{idProduct}==\"$ID_PRODUCT\", SYMLINK+=\"$SYMLINK_NAME\", MODE=\"0666\", TAG+=\"uaccess\""
+
+    echo $RULE >> $RULES_FILE
+    echo "📝 Đã ghi Rule cho [$SYMLINK_NAME]: $RULE"
+    echo "----------------------------------------------------"
+}
+
 bind_device "RPLIDAR" "lidar"
 bind_device "ARDUINO_MOTOR (Điều khiển bánh)" "arduino_motor"
 bind_device "ARDUINO_SONAR (Cảm biến siêu âm)" "arduino_sonar"
+bind_video_device "WEBCAM HUMAN FOLLOWING" "camera_human"
 
 echo "Tải lại cấu hình UDEV hệ thống..."
 udevadm control --reload-rules
@@ -76,5 +120,6 @@ echo "🎉 HOÀN THẤT! Từ giờ các thiết bị của bạn sẽ luôn là
 echo " 1. /dev/lidar"
 echo " 2. /dev/arduino_motor"
 echo " 3. /dev/arduino_sonar"
+echo " 4. /dev/camera_human"
 echo "Bất kể bạn cắm vào lỗ USB nào hay thứ tự khởi động ra sao."
 echo "========================================================================="

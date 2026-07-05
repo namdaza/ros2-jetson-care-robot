@@ -6,18 +6,20 @@
   <title>Robot Map UI</title>
   <style>
     :root {
-      --bg: #eef2f6;
+      --bg: #e9eef5;
       --panel: #ffffff;
-      --text: #17202a;
-      --muted: #667085;
-      --line: #d6dde7;
-      --soft: #f7f9fc;
-      --accent: #246bfe;
-      --accent-dark: #1e4fd1;
+      --text: #111827;
+      --muted: #64748b;
+      --line: #d8e0ea;
+      --soft: #f8fafc;
+      --accent: #0ea5e9;
+      --accent-dark: #0284c7;
       --ok: #16803c;
       --bad: #b42318;
       --goal: #f97316;
       --robot: #0f8b8d;
+      --waypoint: #7c3aed;
+      --shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
     }
 
     * {
@@ -48,6 +50,7 @@
       padding: 0 16px;
       background: var(--panel);
       border-bottom: 1px solid var(--line);
+      box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
     }
 
     h1 {
@@ -58,7 +61,7 @@
 
     .status {
       min-width: 92px;
-      padding: 7px 10px;
+      padding: 8px 12px;
       border: 1px solid var(--line);
       border-radius: 6px;
       background: var(--soft);
@@ -81,7 +84,7 @@
 
     input {
       width: min(30vw, 260px);
-      height: 34px;
+      height: 36px;
       padding: 0 10px;
       border: 1px solid var(--line);
       border-radius: 6px;
@@ -94,20 +97,36 @@
     }
 
     button {
-      height: 34px;
-      padding: 0 11px;
+      height: 36px;
+      padding: 0 12px;
       border: 1px solid var(--line);
       border-radius: 6px;
       background: var(--panel);
       color: var(--text);
       font-weight: 700;
       cursor: pointer;
+      transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+    }
+
+    button:hover:not(:disabled) {
+      border-color: #b8c4d4;
+      background: #f8fafc;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.65;
     }
 
     button.primary {
       border-color: var(--accent-dark);
       background: var(--accent);
       color: #fff;
+    }
+
+    button.primary:hover:not(:disabled) {
+      border-color: var(--accent-dark);
+      background: var(--accent-dark);
     }
 
     button.active {
@@ -119,7 +138,7 @@
     main {
       min-height: 0;
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 220px;
+      grid-template-columns: minmax(0, 1fr) 318px;
       gap: 12px;
       padding: 12px;
     }
@@ -130,7 +149,10 @@
       display: grid;
       grid-template-rows: auto 1fr;
       border: 1px solid var(--line);
+      border-radius: 8px;
       background: var(--panel);
+      box-shadow: var(--shadow);
+      overflow: hidden;
     }
 
     .toolbar {
@@ -141,6 +163,11 @@
       border-bottom: 1px solid var(--line);
       background: var(--soft);
       overflow-x: auto;
+    }
+
+    .toolbar button {
+      flex: 0 0 auto;
+      min-width: 42px;
     }
 
     .canvas-wrap {
@@ -181,17 +208,20 @@
     aside {
       min-width: 0;
       border: 1px solid var(--line);
+      border-radius: 8px;
       background: var(--panel);
-      padding: 12px;
+      padding: 14px;
       display: grid;
       align-content: start;
-      gap: 12px;
+      gap: 14px;
+      overflow: auto;
+      box-shadow: var(--shadow);
     }
 
     .metric {
       display: grid;
       gap: 3px;
-      padding-bottom: 10px;
+      padding-bottom: 12px;
       border-bottom: 1px solid #edf0f5;
     }
 
@@ -213,6 +243,263 @@
       border-bottom: 0;
     }
 
+    .teleop {
+      display: grid;
+      gap: 12px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid #edf0f5;
+    }
+
+    .teleop-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .teleop-title strong {
+      font-size: 15px;
+    }
+
+    .teleop-state {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .teleop-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-areas:
+        ". forward ."
+        "left stop right"
+        ". back .";
+      gap: 7px;
+    }
+
+    .teleop-grid button {
+      width: 100%;
+      min-width: 0;
+      height: 42px;
+      padding: 0;
+      font-size: 20px;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .teleop-grid .forward {
+      grid-area: forward;
+    }
+
+    .teleop-grid .left {
+      grid-area: left;
+    }
+
+    .teleop-grid .right {
+      grid-area: right;
+    }
+
+    .teleop-grid .back {
+      grid-area: back;
+    }
+
+    .teleop-grid .wide {
+      grid-area: stop;
+      font-size: 13px;
+      border-color: #f2aaa3;
+      background: #fff4f2;
+      color: var(--bad);
+    }
+
+    .teleop-grid .pressed {
+      border-color: var(--accent-dark);
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .teleop-speeds {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .teleop-speeds label {
+      display: grid;
+      gap: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .teleop-speeds input {
+      width: 100%;
+      height: 30px;
+    }
+
+    .map-manager {
+      display: grid;
+      gap: 12px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid #edf0f5;
+    }
+
+    .waypoint-panel {
+      display: grid;
+      gap: 12px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid #edf0f5;
+    }
+
+    .map-manager-title,
+    .waypoint-title,
+    .map-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .map-manager-title strong {
+      font-size: 15px;
+    }
+
+    .waypoint-title strong {
+      font-size: 15px;
+    }
+
+    .waypoint-status {
+      width: 100%;
+      min-height: 30px;
+      display: flex;
+      align-items: center;
+      padding: 7px 10px;
+      border: 1px solid #dbeafe;
+      border-radius: 6px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-size: 12px;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    .waypoint-actions,
+    .waypoint-list {
+      display: grid;
+      gap: 6px;
+    }
+
+    .waypoint-actions {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .waypoint-actions button {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .waypoint-actions .waypoint-estop {
+      grid-column: 1 / -1;
+    }
+
+    .waypoint-save {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+    }
+
+    .waypoint-list {
+      max-height: 210px;
+      overflow: auto;
+    }
+
+    .waypoint-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 6px;
+      align-items: center;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #ffffff;
+    }
+
+    .waypoint-row span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .waypoint-row button,
+    .waypoint-actions button {
+      height: 34px;
+      min-width: 0;
+    }
+
+    .waypoint-danger {
+      border-color: #f2aaa3;
+      background: #fff4f2;
+      color: var(--bad);
+    }
+
+    .waypoint-estop {
+      border-color: #991b1b;
+      background: #b42318;
+      color: #fff;
+    }
+
+    .map-save {
+      display: grid;
+      gap: 8px;
+    }
+
+    .map-save input {
+      width: 100%;
+    }
+
+    .map-list {
+      display: grid;
+      gap: 6px;
+      max-height: 180px;
+      overflow: auto;
+    }
+
+    .map-row {
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #ffffff;
+    }
+
+    .map-row.active {
+      border-color: #9ad4ad;
+      background: #f0fdf4;
+    }
+
+    .map-row span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .map-row button {
+      height: 30px;
+      flex: 0 0 auto;
+    }
+
+    .map-message {
+      min-height: 18px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
     @media (max-width: 900px) {
       body {
         overflow: auto;
@@ -226,6 +513,19 @@
       aside {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
+
+      .teleop {
+        grid-column: 1 / -1;
+      }
+
+      .map-manager {
+        grid-column: 1 / -1;
+      }
+
+      .waypoint-panel {
+        grid-column: 1 / -1;
+      }
+
     }
   </style>
 </head>
@@ -233,7 +533,7 @@
   <header>
     <h1>Robot Map</h1>
     <div id="status" class="status bad">Disconnected</div>
-    <button id="homeBtn">Trang chính</button>
+    <button id="homeBtn">← Quay lại</button>
     <div class="backend-controls" aria-hidden="true">
       <input id="wsUrl" aria-label="WebSocket URL" value="">
       <button id="connectBtn" class="primary">Connect</button>
@@ -259,13 +559,65 @@
     </section>
 
     <aside>
+      <div class="map-manager">
+        <div class="map-manager-title">
+          <strong>Maps</strong>
+        </div>
+        <div class="map-save">
+          <input id="mapNameInput" placeholder="ten_map_moi" aria-label="Tên map để lưu">
+          <button id="saveMapBtn">Lưu map hiện tại</button>
+        </div>
+        <div id="mapList" class="map-list"></div>
+        <div id="mapMessage" class="map-message"></div>
+      </div>
+      <div class="waypoint-panel">
+        <div class="waypoint-title">
+          <strong>Waypoints</strong>
+        </div>
+        <div id="waypointStatus" class="waypoint-status">Waiting</div>
+        <div class="waypoint-actions">
+          <button class="waypoint-go" data-waypoint="home">HOME</button>
+          <button class="waypoint-go" data-waypoint="bed1">GIƯỜNG 1</button>
+          <button class="waypoint-go" data-waypoint="medicine_station">LẤY THUỐC</button>
+          <button id="waypointCancelBtn" class="waypoint-danger">Cancel</button>
+          <button id="waypointEstopBtn" class="waypoint-estop">Emergency Stop</button>
+        </div>
+        <div class="waypoint-save">
+          <input id="waypointNameInput" placeholder="ten_diem" aria-label="Tên waypoint">
+          <button id="saveWaypointModeBtn">Lưu điểm</button>
+        </div>
+        <div id="waypointList" class="waypoint-list"></div>
+      </div>
+      <div class="teleop">
+        <div class="teleop-title">
+          <strong>Manual Drive</strong>
+          <span id="teleopState" class="teleop-state">Stopped</span>
+        </div>
+        <div class="teleop-grid" aria-label="Manual robot drive controls">
+          <button class="teleop-btn forward" data-key="forward" data-linear="1" data-angular="0" aria-label="Forward">↑</button>
+          <button class="teleop-btn left" data-key="left" data-linear="0" data-angular="1" aria-label="Turn left">←</button>
+          <button id="stopBtn" class="wide" aria-label="Stop robot">STOP</button>
+          <button class="teleop-btn right" data-key="right" data-linear="0" data-angular="-1" aria-label="Turn right">→</button>
+          <button class="teleop-btn back" data-key="back" data-linear="-1" data-angular="0" aria-label="Backward">↓</button>
+        </div>
+        <div class="teleop-speeds">
+          <label>
+            Linear
+            <input id="linearSpeed" type="number" min="0.02" max="0.20" step="0.01" value="0.08">
+          </label>
+          <label>
+            Angular
+            <input id="angularSpeed" type="number" min="0.10" max="1.00" step="0.05" value="0.45">
+          </label>
+        </div>
+      </div>
       <div class="metric backend">
         <span>Topic</span>
         <strong>/map</strong>
       </div>
       <div class="metric backend">
         <span>Goal publish</span>
-        <strong>/goal_pose</strong>
+        <strong>/waypoint_cmd</strong>
       </div>
       <div class="metric backend">
         <span>Initial pose publish</span>
@@ -314,12 +666,28 @@
     const initialPoseBtn = document.getElementById('initialPoseBtn');
     const goalBtn = document.getElementById('goalBtn');
     const clearGoalBtn = document.getElementById('clearGoalBtn');
+    const saveMapBtn = document.getElementById('saveMapBtn');
+    const mapNameInput = document.getElementById('mapNameInput');
+    const mapListEl = document.getElementById('mapList');
+    const mapMessageEl = document.getElementById('mapMessage');
+    const waypointStatusEl = document.getElementById('waypointStatus');
+    const waypointNameInput = document.getElementById('waypointNameInput');
+    const saveWaypointModeBtn = document.getElementById('saveWaypointModeBtn');
+    const waypointCancelBtn = document.getElementById('waypointCancelBtn');
+    const waypointEstopBtn = document.getElementById('waypointEstopBtn');
+    const waypointListEl = document.getElementById('waypointList');
+    const waypointGoBtns = Array.from(document.querySelectorAll('.waypoint-go'));
     const mapSizeEl = document.getElementById('mapSize');
     const resolutionEl = document.getElementById('resolution');
     const originEl = document.getElementById('origin');
     const robotPoseEl = document.getElementById('robotPose');
     const lastGoalEl = document.getElementById('lastGoal');
     const lastUpdateEl = document.getElementById('lastUpdate');
+    const teleopStateEl = document.getElementById('teleopState');
+    const stopBtn = document.getElementById('stopBtn');
+    const linearSpeedEl = document.getElementById('linearSpeed');
+    const angularSpeedEl = document.getElementById('angularSpeed');
+    const teleopBtns = Array.from(document.querySelectorAll('.teleop-btn'));
 
     let socket = null;
     let map = null;
@@ -330,6 +698,16 @@
     let mode = 'pan';
     let dragging = false;
     let dragStart = null;
+    let teleopTimer = null;
+    let activeTeleopBtn = null;
+    let activeTwist = { linear: 0, angular: 0 };
+    let reconnectTimer = null;
+    let activeMapName = null;
+    let waypoints = [];
+    let robotStatus = 'Waiting';
+    let lastWaypointCommand = '';
+    let lastWaypointCommandAt = 0;
+    const pressedKeys = new Set();
     let view = { scale: 1, offsetX: 0, offsetY: 0, rotation: Math.PI / 2 };
 
     wsUrlEl.value = `ws://${window.location.hostname || 'localhost'}:9090`;
@@ -345,6 +723,10 @@
     }
 
     function connect() {
+      if (reconnectTimer) {
+        window.clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
       if (socket) socket.close();
       setStatus('Connecting', '');
       socket = new WebSocket(wsUrlEl.value);
@@ -353,8 +735,12 @@
         setStatus('Connected', 'ok');
         sendRosbridge({ op: 'subscribe', topic: '/map', type: 'nav_msgs/OccupancyGrid', throttle_rate: 500 });
         sendRosbridge({ op: 'subscribe', topic: '/amcl_pose', type: 'geometry_msgs/PoseWithCovarianceStamped', throttle_rate: 200 });
-        sendRosbridge({ op: 'advertise', topic: '/goal_pose', type: 'geometry_msgs/PoseStamped' });
+        sendRosbridge({ op: 'subscribe', topic: '/robot_status', type: 'std_msgs/String', throttle_rate: 200 });
+        sendRosbridge({ op: 'subscribe', topic: '/waypoints', type: 'std_msgs/String', throttle_rate: 500 });
         sendRosbridge({ op: 'advertise', topic: '/initialpose', type: 'geometry_msgs/PoseWithCovarianceStamped' });
+        sendRosbridge({ op: 'advertise', topic: '/cmd_vel', type: 'geometry_msgs/Twist' });
+        sendRosbridge({ op: 'advertise', topic: '/waypoint_cmd', type: 'std_msgs/String' });
+        publishWaypointCommand('reload');
       });
 
       socket.addEventListener('message', (event) => {
@@ -368,10 +754,291 @@
           robotPoseEl.textContent = formatPose(robotPose);
           render();
         }
+        if (payload.topic === '/robot_status') {
+          robotStatus = payload.msg.data || 'Waiting';
+          waypointStatusEl.textContent = formatRobotStatus(robotStatus);
+        }
+        if (payload.topic === '/waypoints') {
+          updateWaypoints(payload.msg.data);
+        }
       });
 
-      socket.addEventListener('close', () => setStatus('Disconnected', 'bad'));
-      socket.addEventListener('error', () => setStatus('Error', 'bad'));
+      socket.addEventListener('close', () => {
+        stopTeleop(false);
+        setStatus('Disconnected', 'bad');
+        reconnectTimer = window.setTimeout(connect, 2500);
+      });
+      socket.addEventListener('error', () => {
+        stopTeleop(false);
+        setStatus('Error', 'bad');
+      });
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(path, {
+        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+        ...options
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.ok === false) {
+        throw new Error(data.error || data.message || `HTTP ${response.status}`);
+      }
+      return data;
+    }
+
+    function setMapMessage(text, isError = false) {
+      mapMessageEl.textContent = text;
+      mapMessageEl.style.color = isError ? 'var(--bad)' : 'var(--muted)';
+    }
+
+    function setWaypointMessage(text) {
+      waypointStatusEl.textContent = formatRobotStatus(text || robotStatus || 'Waiting');
+    }
+
+    function formatRobotStatus(status) {
+      const text = status || 'Waiting';
+      if (text === 'Waiting') return 'Đang chờ dữ liệu';
+      if (text === 'IDLE') return 'Sẵn sàng';
+      if (text === 'CANCELED') return 'Đã hủy nhiệm vụ';
+      if (text === 'ESTOP') return 'Đã dừng khẩn cấp';
+      if (text.startsWith('GOING_TO:')) return `Đang đi tới: ${text.slice(9)}`;
+      if (text.startsWith('ARRIVED:')) return `Đã đến: ${text.slice(8)}`;
+      if (text.startsWith('FAILED:')) return `Không tới được: ${text.slice(7)}`;
+      if (text.startsWith('ERROR:not_found:')) return `Không có điểm: ${text.slice(16)}`;
+      if (text.startsWith('ERROR:')) return `Lỗi: ${text.slice(6)}`;
+      return text;
+    }
+
+    function publishWaypointCommand(command) {
+      const now = Date.now();
+      const isMotionCommand =
+        command.startsWith('go:') ||
+        command.startsWith('go_pose:') ||
+        command === 'cancel' ||
+        command === 'estop';
+      if (isMotionCommand && command === lastWaypointCommand && now - lastWaypointCommandAt < 800) {
+        return;
+      }
+      lastWaypointCommand = command;
+      lastWaypointCommandAt = now;
+      sendRosbridge({
+        op: 'publish',
+        topic: '/waypoint_cmd',
+        msg: { data: command }
+      });
+    }
+
+    function updateWaypoints(dataText) {
+      try {
+        const payload = JSON.parse(dataText || '{}');
+        waypoints = Array.isArray(payload.waypoints) ? payload.waypoints : [];
+        renderWaypointList();
+        render();
+      } catch (error) {
+        setWaypointMessage('Không đọc được danh sách waypoint.');
+      }
+    }
+
+    function renderWaypointList() {
+      waypointListEl.innerHTML = '';
+      if (!waypoints.length) {
+        const empty = document.createElement('div');
+        empty.className = 'waypoint-row';
+        const label = document.createElement('span');
+        label.textContent = 'Chưa có waypoint';
+        empty.appendChild(label);
+        waypointListEl.appendChild(empty);
+        return;
+      }
+
+      waypoints.forEach((waypoint) => {
+        const row = document.createElement('div');
+        row.className = 'waypoint-row';
+
+        const label = document.createElement('span');
+        label.textContent = waypoint.name;
+
+        const goBtn = document.createElement('button');
+        goBtn.type = 'button';
+        goBtn.textContent = 'Go';
+        goBtn.addEventListener('click', () => goWaypoint(waypoint.name));
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.textContent = 'Xóa';
+        deleteBtn.className = 'waypoint-danger';
+        deleteBtn.addEventListener('click', () => deleteWaypoint(waypoint.name));
+
+        row.appendChild(label);
+        row.appendChild(goBtn);
+        row.appendChild(deleteBtn);
+        waypointListEl.appendChild(row);
+      });
+    }
+
+    function goWaypoint(name) {
+      if (!name) return;
+      publishWaypointCommand(`go:${name}`);
+      setWaypointMessage(`GOING_TO:${name}`);
+    }
+
+    function deleteWaypoint(name) {
+      if (!name) return;
+      publishWaypointCommand(`delete:${name}`);
+      setWaypointMessage(`Deleting ${name}...`);
+    }
+
+    function cleanWaypointName(name) {
+      return (name || '')
+        .trim()
+        .replace(/\s+/g, '_')
+        .replace(/[^A-Za-z0-9_-]/g, '')
+        .slice(0, 48);
+    }
+
+    function cleanMapName(name) {
+      return (name || '')
+        .trim()
+        .replace(/\s+/g, '_')
+        .replace(/[^A-Za-z0-9_-]/g, '')
+        .slice(0, 48);
+    }
+
+    async function loadMaps() {
+      try {
+        const data = await api('/api/maps');
+        activeMapName = data.active;
+        renderMapList(data.maps || []);
+      } catch (error) {
+        setMapMessage(`Không đọc được danh sách map: ${error.message}`, true);
+      }
+    }
+
+    function renderMapList(maps) {
+      mapListEl.innerHTML = '';
+      if (!maps.length) {
+        const empty = document.createElement('div');
+        empty.className = 'map-row';
+        empty.innerHTML = '<span>Chưa có map</span>';
+        mapListEl.appendChild(empty);
+        return;
+      }
+
+      maps.forEach((item) => {
+        const row = document.createElement('div');
+        row.className = `map-row${item.active ? ' active' : ''}`;
+        const name = document.createElement('span');
+        name.textContent = item.active ? `${item.name} - đang dùng` : item.name;
+        const useBtn = document.createElement('button');
+        useBtn.textContent = item.active ? 'Đang chọn' : 'Chọn';
+        useBtn.disabled = item.active;
+        useBtn.addEventListener('click', async () => {
+          try {
+            await api('/api/maps/select', {
+              method: 'POST',
+              body: JSON.stringify({ name: item.name })
+            });
+            activeMapName = item.name;
+            setMapMessage(`Đã chọn map ${item.name}`);
+            await loadMaps();
+          } catch (error) {
+            setMapMessage(error.message, true);
+          }
+        });
+        row.appendChild(name);
+        row.appendChild(useBtn);
+        mapListEl.appendChild(row);
+      });
+    }
+
+    async function saveCurrentMap() {
+      const name = cleanMapName(mapNameInput.value);
+      mapNameInput.value = name;
+      if (!name) {
+        setMapMessage('Nhập tên map trước khi lưu', true);
+        return;
+      }
+      try {
+        setMapMessage(`Đang lưu map ${name}...`);
+        const data = await api('/api/maps/save', {
+          method: 'POST',
+          body: JSON.stringify({ name })
+        });
+        activeMapName = data.active;
+        setMapMessage(`Đã lưu map ${name}`);
+        await loadMaps();
+      } catch (error) {
+        setMapMessage(error.message, true);
+      }
+    }
+
+    function clampNumber(value, min, max, fallback) {
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed)) return fallback;
+      return Math.max(min, Math.min(max, parsed));
+    }
+
+    function publishCmdVel(linear, angular) {
+      sendRosbridge({
+        op: 'publish',
+        topic: '/cmd_vel',
+        msg: {
+          linear: { x: linear, y: 0, z: 0 },
+          angular: { x: 0, y: 0, z: angular }
+        }
+      });
+    }
+
+    function startTeleop(button) {
+      if (!button) return;
+      stopTeleop(false);
+      const linearSpeed = clampNumber(linearSpeedEl.value, 0.02, 0.20, 0.08);
+      const angularSpeed = clampNumber(angularSpeedEl.value, 0.10, 1.00, 0.45);
+      const linear = Number(button.dataset.linear) * linearSpeed;
+      const angular = Number(button.dataset.angular) * angularSpeed;
+      activeTwist = { linear, angular };
+      activeTeleopBtn = button;
+      activeTeleopBtn.classList.add('pressed');
+      teleopStateEl.textContent = button.textContent;
+      publishCmdVel(linear, angular);
+      teleopTimer = window.setInterval(() => {
+        publishCmdVel(activeTwist.linear, activeTwist.angular);
+      }, 120);
+    }
+
+    function stopTeleop(sendStop = true) {
+      if (teleopTimer) {
+        window.clearInterval(teleopTimer);
+        teleopTimer = null;
+      }
+      if (activeTeleopBtn) {
+        activeTeleopBtn.classList.remove('pressed');
+        activeTeleopBtn = null;
+      }
+      activeTwist = { linear: 0, angular: 0 };
+      teleopStateEl.textContent = 'Stopped';
+      if (sendStop) publishCmdVel(0, 0);
+    }
+
+    function teleopButtonForKey(key) {
+      const normalized = key.toLowerCase();
+      if (normalized === 'arrowup' || normalized === 'w') return document.querySelector('[data-key="forward"]');
+      if (normalized === 'arrowdown' || normalized === 's') return document.querySelector('[data-key="back"]');
+      if (normalized === 'arrowleft' || normalized === 'a') return document.querySelector('[data-key="left"]');
+      if (normalized === 'arrowright' || normalized === 'd') return document.querySelector('[data-key="right"]');
+      return null;
+    }
+
+    function isTypingTarget(target) {
+      return target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+    }
+
+    function refreshKeyboardTeleop() {
+      const keys = Array.from(pressedKeys);
+      const lastKey = keys[keys.length - 1];
+      const button = lastKey ? teleopButtonForKey(lastKey) : null;
+      if (button) startTeleop(button);
+      else stopTeleop(true);
     }
 
     function setMap(msg) {
@@ -457,10 +1124,74 @@
       ctx.scale(view.scale, view.scale);
       ctx.drawImage(mapImage, -map.info.width / 2, -map.info.height / 2);
 
+      waypoints.forEach(drawWaypoint);
       if (robotPose) drawPose(robotPose, varColor('--robot'), 8, 'robot');
       if (goalPose) drawPose(goalPose, varColor('--goal'), 9, 'goal');
       if (pendingPose) drawPendingPose();
 
+      ctx.restore();
+    }
+
+    function drawWaypoint(waypoint) {
+      const point = worldToPixel({ x: waypoint.x, y: waypoint.y });
+      const yaw = Number(waypoint.yaw || 0);
+      const size = 7 / view.scale;
+      const waypointColor = varColor('--waypoint');
+
+      ctx.save();
+      ctx.translate(point.x, point.y);
+      ctx.rotate(-yaw);
+      ctx.fillStyle = waypointColor;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2 / view.scale;
+      ctx.beginPath();
+      ctx.arc(0, 0, size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(size * 2.4, 0);
+      ctx.strokeStyle = waypointColor;
+      ctx.stroke();
+      ctx.restore();
+
+      const label = waypoint.name || '';
+      if (!label || view.scale < 0.4) return;
+
+      ctx.save();
+      ctx.translate(point.x, point.y);
+      ctx.rotate(-view.rotation);
+      const fontSize = 12 / view.scale;
+      const padX = 5 / view.scale;
+      const padY = 3 / view.scale;
+      const x = 11 / view.scale;
+      const y = -10 / view.scale;
+      ctx.font = `700 ${fontSize}px Arial`;
+      const textWidth = ctx.measureText(label).width;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.strokeStyle = 'rgba(124, 58, 237, 0.26)';
+      ctx.lineWidth = 1 / view.scale;
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(
+          x - padX,
+          y - fontSize - padY,
+          textWidth + padX * 2,
+          fontSize + padY * 2,
+          4 / view.scale
+        );
+      } else {
+        ctx.rect(
+          x - padX,
+          y - fontSize - padY,
+          textWidth + padX * 2,
+          fontSize + padY * 2
+        );
+      }
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#312e81';
+      ctx.fillText(label, x, y - 2 / view.scale);
       ctx.restore();
     }
 
@@ -537,9 +1268,12 @@
         x: pendingPose.position.x + Math.cos(pendingPose.yaw) * 0.5,
         y: pendingPose.position.y + Math.sin(pendingPose.yaw) * 0.5
       });
+      const color = mode === 'initial'
+        ? varColor('--robot')
+        : (mode === 'waypoint' ? '#7c3aed' : varColor('--goal'));
       ctx.save();
-      ctx.strokeStyle = mode === 'initial' ? varColor('--robot') : varColor('--goal');
-      ctx.fillStyle = mode === 'initial' ? varColor('--robot') : varColor('--goal');
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
       ctx.lineWidth = 3 / view.scale;
       ctx.beginPath();
       ctx.arc(start.x, start.y, 7 / view.scale, 0, Math.PI * 2);
@@ -551,6 +1285,20 @@
       ctx.restore();
     }
 
+    function saveWaypointFromPose(position, yaw) {
+      const name = cleanWaypointName(waypointNameInput.value);
+      waypointNameInput.value = name;
+      if (!name) {
+        setWaypointMessage('Nhập tên waypoint trước khi lưu.');
+        return;
+      }
+
+      publishWaypointCommand(
+        `save:${name}:${position.x.toFixed(4)}:${position.y.toFixed(4)}:${yaw.toFixed(4)}`
+      );
+      setWaypointMessage(`Saving ${name}...`);
+    }
+
     function publishGoal(position, yaw) {
       const pose = {
         position: { x: position.x, y: position.y, z: 0 },
@@ -558,17 +1306,10 @@
       };
       goalPose = pose;
       lastGoalEl.textContent = formatPose(pose);
-      sendRosbridge({
-        op: 'publish',
-        topic: '/goal_pose',
-        msg: {
-          header: {
-            frame_id: 'map',
-            stamp: zeroStamp()
-          },
-          pose
-        }
-      });
+      publishWaypointCommand(
+        `go_pose:${position.x.toFixed(4)}:${position.y.toFixed(4)}:${yaw.toFixed(4)}`
+      );
+      setWaypointMessage('GOING_TO:pose');
       render();
     }
 
@@ -633,8 +1374,88 @@
       render();
     }
 
-    homeBtn.addEventListener('click', () => window.location.assign('/'));
+    function returnTarget() {
+      const target = new URLSearchParams(window.location.search).get('return') || '/';
+      if (!target.startsWith('/') || target.startsWith('//')) return '/';
+      return target;
+    }
+
+    function setInteractionMode(nextMode) {
+      mode = mode === nextMode ? 'pan' : nextMode;
+      initialPoseBtn.classList.toggle('active', mode === 'initial');
+      goalBtn.classList.toggle('active', mode === 'goal');
+      saveWaypointModeBtn.classList.toggle('active', mode === 'waypoint');
+      saveWaypointModeBtn.textContent = mode === 'waypoint' ? 'Đang chọn điểm...' : 'Lưu điểm';
+      wrap.classList.toggle('goal-mode', mode !== 'pan');
+
+      if (mode === 'waypoint') {
+        const name = cleanWaypointName(waypointNameInput.value);
+        waypointNameInput.value = name;
+        if (!name) {
+          setWaypointMessage('Nhập tên waypoint trước, ví dụ: home.');
+          return;
+        }
+        setWaypointMessage(`Click-kéo trên map để lưu điểm ${name}.`);
+      }
+    }
+
+    homeBtn.addEventListener('click', () => window.location.assign(returnTarget()));
     connectBtn.addEventListener('click', connect);
+    saveMapBtn.addEventListener('click', saveCurrentMap);
+    mapNameInput.addEventListener('input', () => {
+      const cleaned = cleanMapName(mapNameInput.value);
+      if (cleaned !== mapNameInput.value) mapNameInput.value = cleaned;
+    });
+    waypointNameInput.addEventListener('input', () => {
+      const cleaned = cleanWaypointName(waypointNameInput.value);
+      if (cleaned !== waypointNameInput.value) waypointNameInput.value = cleaned;
+    });
+    saveWaypointModeBtn.addEventListener('click', () => setInteractionMode('waypoint'));
+    waypointCancelBtn.addEventListener('click', () => {
+      publishWaypointCommand('cancel');
+      setWaypointMessage('CANCELED');
+    });
+    waypointEstopBtn.addEventListener('click', () => {
+      publishWaypointCommand('estop');
+      setWaypointMessage('ESTOP');
+      stopTeleop(true);
+    });
+    waypointGoBtns.forEach((button) => {
+      button.addEventListener('click', () => goWaypoint(button.dataset.waypoint));
+    });
+    stopBtn.addEventListener('click', () => stopTeleop(true));
+    teleopBtns.forEach((button) => {
+      button.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        button.setPointerCapture(event.pointerId);
+        startTeleop(button);
+      });
+      button.addEventListener('pointerup', () => stopTeleop(true));
+      button.addEventListener('pointercancel', () => stopTeleop(true));
+      button.addEventListener('lostpointercapture', () => stopTeleop(true));
+    });
+    window.addEventListener('keydown', (event) => {
+      if (isTypingTarget(event.target)) return;
+      if (event.key === ' ' || event.key === 'Escape') {
+        event.preventDefault();
+        pressedKeys.clear();
+        stopTeleop(true);
+        return;
+      }
+      const button = teleopButtonForKey(event.key);
+      if (!button) return;
+      event.preventDefault();
+      if (pressedKeys.has(event.key.toLowerCase())) return;
+      pressedKeys.add(event.key.toLowerCase());
+      refreshKeyboardTeleop();
+    });
+    window.addEventListener('keyup', (event) => {
+      const button = teleopButtonForKey(event.key);
+      if (!button) return;
+      event.preventDefault();
+      pressedKeys.delete(event.key.toLowerCase());
+      refreshKeyboardTeleop();
+    });
     fitBtn.addEventListener('click', fitMap);
     zoomInBtn.addEventListener('click', () => {
       const rect = wrap.getBoundingClientRect();
@@ -646,18 +1467,8 @@
     });
     rotLeftBtn.addEventListener('click', () => { view.rotation -= Math.PI / 2; fitMap(); });
     rotRightBtn.addEventListener('click', () => { view.rotation += Math.PI / 2; fitMap(); });
-    initialPoseBtn.addEventListener('click', () => {
-      mode = mode === 'initial' ? 'pan' : 'initial';
-      initialPoseBtn.classList.toggle('active', mode === 'initial');
-      goalBtn.classList.remove('active');
-      wrap.classList.toggle('goal-mode', mode !== 'pan');
-    });
-    goalBtn.addEventListener('click', () => {
-      mode = mode === 'goal' ? 'pan' : 'goal';
-      goalBtn.classList.toggle('active', mode === 'goal');
-      initialPoseBtn.classList.remove('active');
-      wrap.classList.toggle('goal-mode', mode !== 'pan');
-    });
+    initialPoseBtn.addEventListener('click', () => setInteractionMode('initial'));
+    goalBtn.addEventListener('click', () => setInteractionMode('goal'));
     clearGoalBtn.addEventListener('click', () => {
       goalPose = null;
       pendingPose = null;
@@ -706,7 +1517,11 @@
       if (mode !== 'pan' && pendingPose) {
         if (mode === 'initial') publishInitialPose(pendingPose.position, pendingPose.yaw);
         if (mode === 'goal') publishGoal(pendingPose.position, pendingPose.yaw);
+        if (mode === 'waypoint') saveWaypointFromPose(pendingPose.position, pendingPose.yaw);
         pendingPose = null;
+        if (mode === 'waypoint') {
+          setInteractionMode('waypoint');
+        }
       }
       dragging = false;
       dragStart = null;
@@ -717,7 +1532,16 @@
       render();
     });
 
-    window.addEventListener('load', connect);
+    window.addEventListener('blur', () => {
+      pressedKeys.clear();
+      stopTeleop(true);
+    });
+    window.addEventListener('beforeunload', () => stopTeleop(true));
+
+    window.addEventListener('load', () => {
+      loadMaps();
+      connect();
+    });
   </script>
 </body>
 </html>

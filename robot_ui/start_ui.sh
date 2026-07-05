@@ -14,6 +14,7 @@ set -u
 # Stop old UI processes to avoid stale code and "Port 5000 is in use".
 pkill -f "python3 /home/jetson/mopero/robot_ui/run_app.py" 2>/dev/null || true
 pkill -f "python3 run_app.py" 2>/dev/null || true
+pkill -f "run_app.py" 2>/dev/null || true
 pkill -f "firefox.*http://localhost:${PORT}" 2>/dev/null || true
 pkill -f "chromium.*http://localhost:${PORT}" 2>/dev/null || true
 pkill -f "google-chrome.*http://localhost:${PORT}" 2>/dev/null || true

@@ -26,6 +26,11 @@ def generate_launch_description():
             get_package_share_directory('my_robot_nav'), 'maps', 'my_room_map.yaml'),
         description='Full path to map yaml file to load'
     )
+    waypoints_file_arg = DeclareLaunchArgument(
+        'waypoints_file', default_value=os.path.join(
+            get_package_share_directory('my_robot_nav'), 'maps', 'my_room_map_waypoints.yaml'),
+        description='Full path to waypoint yaml file for the active map'
+    )
     params_file_arg = DeclareLaunchArgument(
         'params_file', default_value=os.path.join(
             get_package_share_directory('my_robot_nav'), 'config', 'nav2_params.yaml'),
@@ -33,7 +38,7 @@ def generate_launch_description():
     )
     enable_web_ui_arg = DeclareLaunchArgument(
         'enable_web_ui', default_value='true',
-        description='Start rosbridge and UI goal bridge for the browser UI'
+        description='Start rosbridge and waypoint manager for the browser UI'
     )
     enable_ai_agent_arg = DeclareLaunchArgument(
         'enable_ai_agent', default_value='false',
@@ -137,11 +142,14 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration('enable_web_ui'))
     )
 
-    ui_goal_bridge = Node(
+    waypoint_manager = Node(
         package='my_robot_nav',
-        executable='ui_goal_bridge.py',
-        name='ui_goal_bridge',
+        executable='waypoint_manager.py',
+        name='waypoint_manager',
         output='screen',
+        parameters=[{
+            'waypoints_file': LaunchConfiguration('waypoints_file'),
+        }],
         condition=IfCondition(LaunchConfiguration('enable_web_ui'))
     )
 
@@ -166,6 +174,7 @@ def generate_launch_description():
         arduino_port_arg,
         sonar_port_arg,
         map_yaml_arg,
+        waypoints_file_arg,
         params_file_arg,
         enable_web_ui_arg,
         enable_ai_agent_arg,
@@ -179,7 +188,7 @@ def generate_launch_description():
         scan_filter_node,
         delayed_nav2_bringup,
         rosbridge_launch,
-        ui_goal_bridge,
+        waypoint_manager,
         yolo_detection_node,
         human_follower_node,
     ])

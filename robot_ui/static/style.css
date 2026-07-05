@@ -491,7 +491,7 @@ body {
 #start-voice-btn {
     position: fixed;
     right: 24px;
-    bottom: 252px;
+    bottom: 232px;
     z-index: 40;
     width: min(300px, calc(100vw - 32px));
     min-width: unset;
@@ -573,7 +573,7 @@ body {
     #start-voice-btn {
         right: 16px;
         left: 16px;
-        bottom: 226px;
+        bottom: 232px;
         min-width: unset;
         width: auto;
     }

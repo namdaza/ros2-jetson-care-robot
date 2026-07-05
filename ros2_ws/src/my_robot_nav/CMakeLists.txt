@@ -40,6 +40,7 @@ install(
 install(
   PROGRAMS
     scripts/ui_goal_bridge.py
+    scripts/waypoint_manager.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
